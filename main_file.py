@@ -1,4 +1,3 @@
-
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.agents import create_agent
@@ -59,7 +58,7 @@ model = ChatOllama(model='gemma4:e4b', temperature= 0.9)
 
 #Validate whether the question need SQL query
 
-def question_requires_sql(question: str) -> bool:
+def question_requires_sql(question: str, tables_description : dict) -> bool:
     """
     Determine whether the user's question requires querying the SQL database.
     Returns False for greetings, casual conversation, and unrelated questions.
@@ -70,8 +69,9 @@ def question_requires_sql(question: str) -> bool:
             """
 You route user questions for a retail SQL chatbot.
 
-Return requires_sql=true only when the question needs information from the
-transactions database.
+Return requires_sql=true only when the question needs information from the database.
+
+these are the description of tables in the database - {tables_description}
 
 Return requires_sql=false for:
 - Greetings such as Hi or Hello
@@ -94,7 +94,7 @@ Return JSON matching:
         | model.with_structured_output(Question_Routing)
     )
 
-    result = routing_chain.invoke({"question": question})
+    result = routing_chain.invoke({"question": question,"tables_description" : tables_description})
 
     if result.requires_sql == False:
         print (result.reason)
@@ -411,11 +411,12 @@ try :
         if user_question == 'q':
             break
 
-        bool_val = question_requires_sql(question=user_question)
+        tables_description = get_tables_description(connection= database)
+
+        bool_val = question_requires_sql(question=user_question,tables_description= tables_description)
             
         if bool_val:
-            tables_description = get_tables_description(connection= database)
-
+            
             final_query = create_validated_query(question= user_question, tables_description=tables_description)
 
             if not final_query:
